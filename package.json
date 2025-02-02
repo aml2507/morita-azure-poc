@@ -9,16 +9,19 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.36.3",
     "eslint": "^8.56.0",
     "eslint-config-next": "15.1.6",
     "next": "15.1.6",
     "next-themes": "^0.2.1",
+    "pdf-parse": "^1.1.1",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-modal-video": "^2.0.1"
   },
   "devDependencies": {
     "@types/node": "^20.8.9",
+    "@types/pdf-parse": "^1.1.4",
     "@types/react": "19.0.8",
     "autoprefixer": "^10.4.17",
     "postcss": "^8.4.35",

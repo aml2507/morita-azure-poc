@@ -5,11 +5,14 @@ import featuresData from "./featuresData";
 const Features = () => {
   return (
     <>
-      <section id="features" className="py-16 md:py-20 lg:py-28">
+      <section
+        id="features"
+        className="bg-primary/[.03] py-16 md:py-20 lg:py-28"
+      >
         <div className="container">
           <SectionTitle
-            title="Main Features"
-            paragraph="There are many variations of passages of Lorem Ipsum available but the majority have suffered alteration in some form."
+            title="¿Por qué elegir Morita?"
+            paragraph="Descubre cómo Morita puede ayudarte a tomar el control de tus finanzas y mejorar tus hábitos de gasto de manera inteligente y personalizada."
             center
           />
 

@@ -2,45 +2,38 @@
 
 import { motion } from "framer-motion"
 
-// Definir posiciones fijas para las monedas (comentado por ahora)
-/*const COIN_POSITIONS = [
-  { startX: -40, endX: 0 },
-  { startX: 30, endX: 0 },
-  { startX: -20, endX: 0 },
-  { startX: 45, endX: 0 },
-  { startX: -35, endX: 0 },
-  { startX: 20, endX: 0 },
-]*/
+// Monedas caen desde arriba del cerdo hasta la ranura
+const COIN_POSITIONS = [
+  { startX: -30 },
+  { startX: -30 },
+  { startX: -30 },
+]
 
 export function AnimatedPig() {
   return (
     <div className="relative w-[450px] h-[200px] flex items-center justify-center -mt-20 overflow-visible">
-      {/* Monedas cayendo (comentado por ahora)
-      {COIN_POSITIONS.map((pos, i) => (
-        <motion.div
-          key={i}
-          className="absolute z-20"
-          initial={{
-            x: pos.startX,
-            y: -150,
-            scale: 0,
-          }}
-          animate={{
-            x: pos.endX,
-            y: 20,
-            scale: 1,
-          }}
-          transition={{
-            duration: 1.2,
-            repeat: Number.POSITIVE_INFINITY,
-            delay: i * 0.3,
-            ease: "linear",
-          }}
-        >
-          <div className="w-3 h-3 rounded-full bg-[#C71CD2] shadow-[0_0_10px_#C71CD2]" />
-        </motion.div>
-      ))}
-      */}
+      {/* Moneda única (punto de la i) cayendo */}
+      <motion.div
+        className="absolute z-20 left-[60%] top-[-300px]" // Posicionado en el punto de la i
+        initial={{
+          opacity: 1,
+          scale: 1,
+        }}
+        animate={{
+          y: [250, 300], // Cae desde el punto de la i hasta la ranura
+          x: [15, -15], // Ligero movimiento diagonal
+          scale: [1, 1, 0.8], // Efecto de perspectiva al caer
+        }}
+        transition={{
+          duration: 2,
+          repeat: Number.POSITIVE_INFINITY,
+          repeatDelay: 1,
+          ease: "easeIn",
+          times: [0, 0.8, 1], // Controla la aceleración de la caída
+        }}
+      >
+        <div className="w-4 h-4 rounded-full bg-[#C71CD2] shadow-[0_0_15px_#C71CD2] opacity-90" />
+      </motion.div>
 
       {/* Cerdito Neón */}
       <motion.div

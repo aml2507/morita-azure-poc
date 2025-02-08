@@ -1,10 +1,22 @@
-"use client";
-
 import Header from "@/components/Header";
 import { Inter } from "next/font/google";
 import "../styles/index.css";
+import { Metadata } from "next";
 
 const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "Morita",
+  description: "Morita es tu asistente financiero personal que te ayuda a analizar y entender tus gastos.",
+  icons: {
+    icon: [
+      {
+        url: "/favicon.ico",
+        sizes: "any",
+      },
+    ],
+  },
+};
 
 export default function RootLayout({
   children,

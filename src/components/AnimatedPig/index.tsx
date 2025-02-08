@@ -2,12 +2,12 @@
 
 import { motion } from "framer-motion"
 
-// Monedas caen desde arriba del cerdo hasta la ranura
-const COIN_POSITIONS = [
-  { startX: -30 },
-  { startX: -30 },
-  { startX: -30 },
-]
+// // Monedas caen desde arriba del cerdo hasta la ranura
+// const COIN_POSITIONS = [
+//   { startX: -30 },
+//   { startX: -30 },
+//   { startX: -30 },
+// ]
 
 export function AnimatedPig() {
   return (

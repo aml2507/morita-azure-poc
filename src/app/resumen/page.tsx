@@ -11,10 +11,6 @@ export const metadata: Metadata = {
 const ResumenPage = () => {
   return (
     <>
-      <Breadcrumb
-        pageName="Analizador de Resúmenes"
-        description="Sube tu resumen de tarjeta de crédito y obtén un análisis detallado instantáneo"
-      />
       <section className="pb-[120px] pt-[120px]">
         <div className="container">
           <PdfUploader />

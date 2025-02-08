@@ -10,14 +10,18 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "eslint": "^8.56.0",
     "eslint-config-next": "15.1.6",
+    "framer-motion": "^12.3.1",
     "next": "15.1.6",
     "next-themes": "^0.2.1",
     "pdf-parse": "^1.1.1",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "react-modal-video": "^2.0.1"
+    "react-modal-video": "^2.0.1",
+    "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {
     "@types/node": "^20.8.9",

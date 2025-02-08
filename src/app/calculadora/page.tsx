@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import PageLayout from "@/components/Common/PageLayout";
 import PaymentCalculator from "@/components/Calculadora/PaymentCalculator";
 
 export const metadata: Metadata = {
@@ -8,10 +9,11 @@ export const metadata: Metadata = {
 
 export default function CalculadoraPage() {
   return (
-    <section className="pb-[120px] pt-[120px]">
-      <div className="container">
-        <PaymentCalculator />
-      </div>
-    </section>
+    <PageLayout
+      title="Calculadora de Pagos"
+      description="Simula diferentes escenarios de pago y encuentra la mejor opción para ti."
+    >
+      <PaymentCalculator />
+    </PageLayout>
   );
 } 

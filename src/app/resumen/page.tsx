@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import PdfUploader from "@/components/Resumen/PdfUploader";
+import AnalysisLimit from "@/components/Resumen/AnalysisLimit";
 
 export const metadata: Metadata = {
   title: "Analizador de Resúmenes | Morita",
@@ -55,15 +56,7 @@ const ResumenPage = () => {
 
         {/* Sección de carga de PDF */}
         <div className="max-w-2xl mx-auto">
-          <div className="bg-black/20 backdrop-blur-lg rounded-2xl p-8 shadow-xl border border-white/10">
-            <h2 className="text-2xl font-bold text-white mb-4 text-center">
-              Sube tu Resumen
-            </h2>
-            <p className="text-white/70 text-center mb-8">
-              Arrastra tu archivo PDF o haz clic para seleccionarlo
-            </p>
-            <PdfUploader />
-          </div>
+          <PdfUploader />
         </div>
       </div>
     </div>

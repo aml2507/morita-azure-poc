@@ -1,12 +1,25 @@
+"use client";
+
+import { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { auth } from '@/lib/firebase';
 import AuthButtons from "@/components/Auth/AuthButtons";
-import { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Iniciar Sesión | Morita",
-  description: "Inicia sesión en tu cuenta de Morita",
-};
+export default function SignIn() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams.get('returnUrl') || '/analizar';
 
-const SigninPage = () => {
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        router.push(returnUrl);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router, returnUrl]);
+
   return (
     <div className="min-h-screen pt-24 pb-12 flex flex-col items-center">
       <div className="w-full max-w-md px-8">
@@ -22,6 +35,4 @@ const SigninPage = () => {
       </div>
     </div>
   );
-};
-
-export default SigninPage;
+}

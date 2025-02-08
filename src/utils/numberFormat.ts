@@ -1,6 +1,3 @@
 export const formatearNumero = (numero: number): string => {
-  return numero.toLocaleString('es-AR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
+  return new Intl.NumberFormat('es-AR').format(numero);
 }; 

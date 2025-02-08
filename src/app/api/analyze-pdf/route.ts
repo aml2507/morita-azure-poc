@@ -1,36 +1,169 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/firebase-admin';
+import { anthropic } from '@/lib/anthropic';
+import pdfParse from 'pdf-parse/lib/pdf-parse.js';
 
-export async function POST(request: Request) {
+// Asegurarse de que la ruta sea dinámica
+export const dynamic = 'force-dynamic';
+
+// Aumentar el límite de tiempo para archivos grandes
+export const maxDuration = 300;
+
+// Configurar el tamaño máximo del cuerpo de la solicitud
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Agregar manejador OPTIONS
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+}
+
+export async function POST(request: NextRequest) {
   try {
-    // Por ahora ignoramos el PDF y solo devolvemos datos de prueba
-    return NextResponse.json({
-      analysis: {
-        deudaActual: "132862.05",
-        pagoMinimo: "101110.00",
-        fechaVencimiento: "3 de Febrero 2025",
-        distribucionGastos: [
-          { categoria: "Supermercados", monto: "45000.00" },
-          { categoria: "Restaurantes", monto: "28000.00" },
-          { categoria: "Servicios", monto: "35000.00" },
-          { categoria: "Otros", monto: "24862.05" }
-        ],
-        simulacionPagoMinimo: {
-          totalPagar: "257.51",
-          tiempoEstimado: "36 meses",
-          interesesTotales: "111.00",
-        },
-        recomendaciones: [
-          "Intenta pagar más que el mínimo para reducir intereses futuros",
-          "La tarjeta tiene un límite de compra de $640,000.00. Úsalo con precaución.",
-          "Los adelantos en efectivo tienen cargos adicionales y tasas más altas"
-        ]
-      }
-    });
+    // Verificar el token de autenticación
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'No autorizado', success: false },
+        { status: 401 }
+      );
+    }
 
+    const token = authHeader.split('Bearer ')[1];
+    try {
+      await auth.verifyIdToken(token);
+    } catch (error) {
+      console.error('Error verificando token:', error);
+      return NextResponse.json(
+        { error: 'Token inválido', success: false },
+        { status: 401 }
+      );
+    }
+
+    // Procesar el archivo
+    const formData = await request.formData();
+    const file = formData.get('pdf');
+
+    if (!file || !(file instanceof File)) {
+      console.error('No se encontró el archivo en formData:', 
+        Array.from(formData.entries()).map(([key, value]) => ({
+          key,
+          type: typeof value,
+          isFile: value instanceof File
+        }))
+      );
+      return NextResponse.json(
+        { error: 'No se encontró el archivo', success: false },
+        { status: 400 }
+      );
+    }
+
+    try {
+      console.log('Backend: Procesando archivo PDF');
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      
+      const options = {
+        max: 0,
+        version: 'default'
+      };
+
+      console.log('Backend: Iniciando extracción de texto');
+      const pdfData = await pdfParse(buffer, options);
+      const pdfText = pdfData.text;
+      console.log('Backend: Texto extraído, longitud:', pdfText.length);
+
+      console.log('Backend: Enviando texto a Claude');
+      const message = await anthropic.messages.create({
+        model: "claude-3-sonnet-20240229",
+        max_tokens: 4096,
+        messages: [{
+          role: "user",
+          content: `Analiza este resumen de tarjeta de crédito y extrae SOLO la siguiente información en formato JSON, sin incluir ningún texto adicional o markdown:
+            {
+              "deudaActual": number,
+              "pagoMinimo": number,
+              "fechaVencimiento": string,
+              "distribucionGastos": [
+                {
+                  "categoria": string,
+                  "monto": number
+                }
+              ],
+              "simulacionPagoMinimo": {
+                "totalPagar": number,
+                "tiempoEstimado": string,
+                "interesesTotales": number
+              },
+              "recomendaciones": string[]
+            }
+
+            Si no puedes encontrar algún valor, usa null.
+            Resumen:
+            ${pdfText}
+          `
+        }]
+      });
+
+      console.log('Backend: Respuesta recibida de Claude');
+      let analysis;
+      try {
+        const responseText = message.content[0].text.trim();
+        console.log('Backend: Texto de respuesta:', responseText);
+        analysis = JSON.parse(responseText);
+        console.log('Backend: Análisis parseado correctamente');
+      } catch (parseError) {
+        console.error('Backend: Error al parsear respuesta de Claude:', parseError);
+        throw new Error('Error al procesar la respuesta del análisis');
+      }
+
+      return new Response(
+        JSON.stringify({ analysis, success: true }),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      );
+    } catch (error) {
+      console.error('Error procesando PDF:', error);
+      return new Response(
+        JSON.stringify({ 
+          error: error instanceof Error ? error.message : 'Error al procesar el PDF',
+          success: false 
+        }),
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      );
+    }
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error en el endpoint:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
+      { 
+        error: error instanceof Error ? error.message : 'Error interno del servidor',
+        success: false 
+      },
       { status: 500 }
     );
   }

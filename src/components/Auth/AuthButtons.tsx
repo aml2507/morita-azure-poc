@@ -10,6 +10,7 @@ import {
 } from "firebase/auth";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import Image from 'next/image';
 
 export default function AuthButtons() {
   const [email, setEmail] = useState("");
@@ -98,7 +99,13 @@ export default function AuthButtons() {
         onClick={handleGoogleAuth}
         className="flex items-center justify-center gap-3 rounded-lg bg-white/10 backdrop-blur-sm px-6 py-3 text-white hover:bg-white/20 transition-all"
       >
-        <img src="/google-icon.svg" alt="Google" className="h-5 w-5" />
+        <Image
+          src="/google-icon.svg"
+          alt="Google"
+          width={24}
+          height={24}
+          className="h-5 w-5"
+        />
         Continuar con Google
       </button>
 

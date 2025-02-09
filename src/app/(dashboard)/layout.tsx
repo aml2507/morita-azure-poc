@@ -8,7 +8,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 
 function LoadingScreen() {
   return (
-    <div className="min-h-[calc(100vh-80px)] pt-20 flex items-center justify-center bg-[#0A0118]">
+    <div className="min-h-screen pt-20 flex items-center justify-center bg-[#0A0118]">
       <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#FF00FF]"></div>
     </div>
   );
@@ -22,35 +22,30 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [authChecked, setAuthChecked] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        // Redirigir a signin si no está autenticado
+      const isAuthPage = pathname.includes('/signin') || pathname.includes('/signup');
+      
+      if (!user && !isAuthPage) {
+        // Si no hay usuario y no estamos en una página de auth, redirigir a login
         const returnUrl = encodeURIComponent(pathname);
-        router.replace(`/signin?returnUrl=${returnUrl}`);
-      } else {
-        setIsAuthenticated(true);
+        window.location.href = `/signin?returnUrl=${returnUrl}`;
+        return;
       }
+      
       setAuthChecked(true);
     });
 
     return () => unsubscribe();
-  }, [pathname, router]);
+  }, [pathname]);
 
-  // No mostrar nada hasta que se verifique la autenticación
   if (!authChecked) {
     return <LoadingScreen />;
   }
 
-  // Solo mostrar el contenido si está autenticado
-  if (!isAuthenticated) {
-    return null;
-  }
-
   return (
-    <div className="min-h-[calc(100vh-80px)] pt-20 relative">
+    <div className="min-h-screen bg-[#0A0118]">
       <AnimatePresence mode="wait">
         <motion.div
           key={pathname}
@@ -58,7 +53,7 @@ export default function DashboardLayout({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.15 }}
-          className="absolute inset-0 bg-[#0A0118]"
+          className="pt-16"
         >
           {children}
         </motion.div>

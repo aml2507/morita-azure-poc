@@ -33,7 +33,8 @@ const Header = () => {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      // Limpiar localStorage al desloguearse
+      // Eliminar la cookie al cerrar sesión
+      document.cookie = 'firebase-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
       localStorage.removeItem('lastAnalysis');
       router.push('/');
     } catch (error) {

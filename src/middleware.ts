@@ -1,16 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Almacenamiento en memoria para el rate limiting
-const rateLimit = new Map<string, { count: number; timestamp: number }>();
-
-// Configuración del rate limit
-const WINDOW_SIZE = 60 * 1000; // 1 minuto
-const MAX_REQUESTS = 5; // 5 requests por minuto
-
-export function middleware(request: NextRequest) {
-  // Obtener el token de la cookie
-  const session = request.cookies.get('session')?.value;
+export async function middleware(request: NextRequest) {
+  // Obtener el token de Firebase de las cookies
+  const idToken = request.cookies.get('firebase-token')?.value;
 
   // Rutas protegidas
   const protectedPaths = ['/calculadora', '/resumen'];
@@ -18,7 +11,7 @@ export function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith(path)
   );
 
-  if (isProtectedPath && !session) {
+  if (isProtectedPath && !idToken) {
     // Guardar la URL a la que intentaba acceder
     const returnUrl = encodeURIComponent(request.nextUrl.pathname);
     return NextResponse.redirect(new URL(`/signin?returnUrl=${returnUrl}`, request.url));
@@ -28,5 +21,11 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/calculadora/:path*', '/resumen/:path*']
-}; 
+  matcher: [
+    // Solo proteger estas rutas específicas
+    '/calculadora',
+    '/calculadora/:path*',
+    '/resumen',
+    '/resumen/:path*'
+  ]
+};

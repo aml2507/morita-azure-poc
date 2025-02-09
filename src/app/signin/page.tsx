@@ -13,7 +13,7 @@ export default function SignIn() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
-        router.replace(returnUrl);
+        router.push(returnUrl);
       }
     });
 

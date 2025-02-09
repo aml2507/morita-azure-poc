@@ -49,8 +49,8 @@ export function AnimatedPig() {
       >
         <svg 
           xmlns="http://www.w3.org/2000/svg" 
-          width="450"
-          height="450"
+          width="500"
+          height="500"
           viewBox="-10.59 0.59 1080 1080"
           className="-translate-x-20"
         >

@@ -262,71 +262,58 @@ const PdfUploader = () => {
         <div className="grid md:grid-cols-2 gap-8">
           <div className="space-y-6">
             <div>
-              <h4 className="text-lg font-medium text-white/70 mb-2">CFT - El Verdadero Costo</h4>
+              <h4 className="text-lg font-medium text-white/70 mb-2">CFT - El Costo Real de tu Deuda</h4>
               <p className="text-sm text-white/70">
-                Imagina que le pides $100 prestados a un amigo. Con el CFT, no solo le devolverás
-                los $100, sino ${formatearNumero(Number(150))} en total por todos los costos.
-                En tu caso, por cada $100 de deuda, terminarás pagando ${formatearNumero(Number(analysis.simulacionPagoMinimo?.totalPagar || 150))} al año.
+                En tu caso, con una deuda de ${formatearNumero(Number(analysis.deudaActual))}, 
+                si solo pagas el mínimo, en un año terminarás pagando ${formatearNumero(Number(analysis.deudaActual * 1.95))} en total.
+                Es como si por cada $1,000 que debes, terminaras pagando $1,950. 
+                Por eso es importante pagar más que el mínimo.
               </p>
             </div>
             
             <div>
-              <h4 className="text-lg font-medium text-white/70 mb-2">TNA - El Interés Básico</h4>
+              <h4 className="text-lg font-medium text-white/70 mb-2">TNA - Lo que te Cobran por Mes</h4>
               <p className="text-sm text-white/70">
-                Es como cuando ahorras plata en una alcancía, pero al revés. 
-                En vez de ganar interés, pagas un {analysis.simulacionPagoMinimo?.interesesTotales || "95"}% 
-                al año por el dinero prestado. Por ejemplo, por tu deuda actual de ${formatearNumero(Number(analysis.deudaActual))},
-                pagarías ${formatearNumero(Number(analysis.deudaActual * 0.95))} solo en intereses en un año.
+                Con tu pago mínimo actual de ${formatearNumero(Number(analysis.pagoMinimo))}, 
+                aproximadamente ${formatearNumero(Number(analysis.pagoMinimo * 0.85))} se van solo en intereses.
+                Es como si de cada $100 que pagas, $85 fueran para el banco y solo $15 para reducir tu deuda.
               </p>
             </div>
           </div>
 
           <div className="space-y-6">
             <div>
-              <h4 className="text-lg font-medium text-white/70 mb-2">TEA - El Interés Real</h4>
+              <h4 className="text-lg font-medium text-white/70 mb-2">TEA - Por Qué tu Deuda Crece Tan Rápido</h4>
               <p className="text-sm text-white/70">
-                Es como una bola de nieve que crece cada mes. Los intereses se suman a tu deuda y luego
-                te cobran intereses sobre esos intereses. Por eso, aunque la TNA sea {analysis.simulacionPagoMinimo?.interesesTotales || "95"}%,
-                terminas pagando más: un {analysis.simulacionPagoMinimo?.totalPagar || "120"}% real al año.
+                Si este mes debes ${formatearNumero(Number(analysis.deudaActual))} y solo pagas el mínimo,
+                el mes que viene deberás ${formatearNumero(Number(analysis.deudaActual * 1.15))}.
+                Es como una bola de nieve: cada mes que no pagas el total, los intereses se suman a tu deuda
+                y luego te cobran intereses sobre esos intereses.
               </p>
             </div>
 
             <div>
-              <h4 className="text-lg font-medium text-white/70 mb-2">Tasa Punitoria - La Multa</h4>
+              <h4 className="text-lg font-medium text-white/70 mb-2">Tasa Punitoria - El Castigo por Atrasarte</h4>
               <p className="text-sm text-white/70">
-                Es como cuando llegas tarde a una clase y te ponen falta doble. Si te atrasas en los pagos,
-                además de los intereses normales, te cobran un 50% extra. Por ejemplo, si debías pagar $100 de interés,
-                terminarías pagando $150 por atrasarte.
+                Si te atrasas en el pago mínimo de ${formatearNumero(Number(analysis.pagoMinimo))},
+                además de los intereses normales de ${formatearNumero(Number(analysis.pagoMinimo * 0.85))},
+                te cobrarán ${formatearNumero(Number(analysis.pagoMinimo * 0.425))} extra de penalidad.
+                Por eso es crucial nunca atrasarte en los pagos.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Ejemplo Práctico Mejorado con Contexto Temporal */}
-        <div className="mt-8 p-6 bg-white/5 rounded-xl border border-white/10">
-          <h4 className="text-lg font-medium text-white/70 mb-4">
-            💡 Entendiendo tu Situación Actual
+        <div className="mt-8 p-6 bg-red-500/10 rounded-xl border border-red-500/20">
+          <h4 className="text-lg font-medium text-red-400 mb-4">
+            ⚠️ Lo que necesitas saber
           </h4>
-          <div className="grid md:grid-cols-2 gap-6 text-sm text-white/70">
-            <div>
-              <p className="mb-2">Si sigues pagando solo el mínimo de ${formatearNumero(Number(analysis.pagoMinimo))}:</p>
-              <ul className="list-disc list-inside space-y-2 ml-4">
-                <li>Tu deuda actual: ${formatearNumero(Number(analysis.deudaActual))}</li>
-                <li>En 12 meses habrás pagado: ${formatearNumero(Number(analysis.pagoMinimo * 12))} en total</li>
-                <li>Pero tu deuda solo se reducirá a: ${formatearNumero(Number(analysis.deudaActual * 0.85))}</li>
-                <li>En intereses habrás pagado: ${formatearNumero(Number(analysis.pagoMinimo * 12 * 0.85))} en un año</li>
-              </ul>
-            </div>
-            <div>
-              <p className="mb-2">Con Plan V en 18 cuotas fijas:</p>
-              <ul className="list-disc list-inside space-y-2 ml-4">
-                <li>Cuota mensual fija de ${formatearNumero(Number(analysis.deudaActual / 18))}</li>
-                <li>En 18 meses tu deuda estará completamente cancelada</li>
-                <li>Pagarás menos intereses en total</li>
-                <li>Tendrás un plan claro de salida de la deuda</li>
-              </ul>
-            </div>
-          </div>
+          <p className="text-sm text-white/70">
+            Con tu deuda actual de ${formatearNumero(Number(analysis.deudaActual))}, si sigues pagando solo el mínimo:
+            <br/>• En 6 meses habrás pagado ${formatearNumero(Number(analysis.pagoMinimo * 6))} pero tu deuda seguirá siendo casi la misma
+            <br/>• En 1 año podrías terminar debiendo más de ${formatearNumero(Number(analysis.deudaActual * 1.3))} a pesar de haber pagado ${formatearNumero(Number(analysis.pagoMinimo * 12))}
+            <br/>• La única forma de salir de esta situación es pagar más que el mínimo o considerar el Plan V
+          </p>
         </div>
       </div>
 

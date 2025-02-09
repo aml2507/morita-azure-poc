@@ -1,5 +1,5 @@
 import { StatementCache } from '../statementCache';
-import { generateStatementHash } from '../hashGenerator';
+import { generateHash } from '../hashGenerator';
 
 describe('Cache Integration Tests', () => {
   const testData = {
@@ -21,7 +21,7 @@ describe('Cache Integration Tests', () => {
 
   // Limpiar el caché después de cada test
   afterEach(async () => {
-    const hash = generateStatementHash(testData);
+    const hash = generateHash(testData);
     await StatementCache.invalidate(hash);
   });
 

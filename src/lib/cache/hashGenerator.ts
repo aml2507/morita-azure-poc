@@ -12,7 +12,7 @@ interface StatementData {
   statementDate: string;
 }
 
-export function generateStatementHash(data: StatementData): string {
+export function generateHash(data: StatementData): string {
   // Ordenamos las transacciones para asegurar consistencia
   const sortedTransactions = [...data.transactions].sort((a, b) => {
     if (a.date !== b.date) return a.date.localeCompare(b.date);

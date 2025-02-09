@@ -8,12 +8,12 @@ import AuthButtons from "@/components/Auth/AuthButtons";
 export default function SignIn() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const returnUrl = searchParams.get('returnUrl') || '/analizar';
+  const returnUrl = searchParams.get('returnUrl') || '/resumen';
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
-        router.push(returnUrl);
+        router.replace(returnUrl);
       }
     });
 

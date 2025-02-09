@@ -15,6 +15,7 @@ const CalculadoraPagos = () => {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (!user) {
+        localStorage.removeItem('lastAnalysis'); // Limpiar datos al no tener usuario
         const currentPath = window.location.pathname;
         router.push(`/signin?returnUrl=${encodeURIComponent(currentPath)}`);
       } else {
@@ -54,10 +55,17 @@ const CalculadoraPagos = () => {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-6 space-y-8">
+    <div className="w-full max-w-4xl mx-auto p-6">
+      <div className="text-center mb-12">
+        <h1 className="text-5xl font-bold text-[#FF00FF] mb-4">
+          Calculadora de Pagos
+        </h1>
+        <p className="text-xl text-white/70">
+          Simula diferentes escenarios de pago y encuentra la mejor opción para ti.
+        </p>
+      </div>
+
       <div className="bg-gradient-to-br from-purple-900/40 to-fuchsia-900/40 backdrop-blur-lg rounded-2xl p-8 shadow-xl border border-white/10">
-        <h2 className="text-2xl font-bold text-white mb-6">Simulador de Pagos</h2>
-        
         <div className="grid md:grid-cols-2 gap-8">
           <div className="space-y-4">
             <div>

@@ -7,6 +7,7 @@ import { auth } from "@/lib/firebase";
 import { useEffect, useState } from "react";
 import { User } from "firebase/auth";
 import Image from "next/image";
+import { signOut } from "firebase/auth";
 
 const Header = () => {
   const pathname = usePathname();
@@ -29,12 +30,14 @@ const Header = () => {
     router.push("/signup");
   };
 
-  const handleSignOut = async () => {
+  const handleLogout = async () => {
     try {
-      await auth.signOut();
-      router.push("/");
+      await signOut(auth);
+      // Limpiar localStorage al desloguearse
+      localStorage.removeItem('lastAnalysis');
+      router.push('/');
     } catch (error) {
-      console.error("Error al cerrar sesión:", error);
+      console.error('Error al cerrar sesión:', error);
     }
   };
 
@@ -79,7 +82,7 @@ const Header = () => {
               <Button 
                 variant="ghost" 
                 className="text-white/70 hover:text-white"
-                onClick={handleSignOut}
+                onClick={handleLogout}
               >
                 Cerrar sesión
               </Button>

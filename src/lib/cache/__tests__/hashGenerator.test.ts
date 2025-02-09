@@ -1,6 +1,6 @@
-import { generateStatementHash } from '../hashGenerator';
+import { generateHash } from '../hashGenerator';
 
-describe('generateStatementHash', () => {
+describe('generateHash', () => {
   it('should generate consistent hashes for same data', () => {
     const data1 = {
       transactions: [
@@ -20,8 +20,8 @@ describe('generateStatementHash', () => {
       statementDate: '2024-03-22'
     };
 
-    const hash1 = generateStatementHash(data1);
-    const hash2 = generateStatementHash(data2);
+    const hash1 = generateHash(data1);
+    const hash2 = generateHash(data2);
 
     expect(hash1).toBe(hash2);
   });
@@ -43,8 +43,8 @@ describe('generateStatementHash', () => {
       statementDate: '2024-03-22'
     };
 
-    const hash1 = generateStatementHash(data1);
-    const hash2 = generateStatementHash(data2);
+    const hash1 = generateHash(data1);
+    const hash2 = generateHash(data2);
 
     expect(hash1).not.toBe(hash2);
   });

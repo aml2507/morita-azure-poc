@@ -13,13 +13,13 @@ export function middleware(request: NextRequest) {
   const session = request.cookies.get('session')?.value;
 
   // Rutas protegidas
-  const protectedPaths = ['/analizar'];
+  const protectedPaths = ['/calculadora', '/resumen'];
   const isProtectedPath = protectedPaths.some(path =>
     request.nextUrl.pathname.startsWith(path)
   );
 
   if (isProtectedPath && !session) {
-    // Redirigir a login con returnUrl
+    // Guardar la URL a la que intentaba acceder
     const returnUrl = encodeURIComponent(request.nextUrl.pathname);
     return NextResponse.redirect(new URL(`/signin?returnUrl=${returnUrl}`, request.url));
   }
@@ -28,5 +28,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/analizar/:path*']
+  matcher: ['/calculadora/:path*', '/resumen/:path*']
 }; 

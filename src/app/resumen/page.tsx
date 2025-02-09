@@ -9,8 +9,8 @@ export const metadata: Metadata = {
 
 const ResumenPage = () => {
   return (
-    <div className="min-h-screen pt-24 pb-12">
-      <div className="container mx-auto px-4">
+    <div className="h-full w-full">
+      <div className="container mx-auto px-4 pb-12">
         {/* Sección de encabezado */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-white mb-4">

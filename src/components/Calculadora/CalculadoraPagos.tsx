@@ -33,24 +33,73 @@ const CalculadoraPagos = () => {
     return () => unsubscribe();
   }, [router]);
 
-  const calcularPagos = () => {
+  const calcularTiempoTotal = (deuda: number, pagoMensual: number, tasaMensual: number) => {
     let meses = 0;
-    let totalPagado = 0;
-    let deudaRestante = deudaActual;
-    const tasaMensual = 0.15; // 15% mensual
-
-    while (deudaRestante > 0 && meses < 120) { // máximo 10 años
+    let deudaRestante = deuda;
+    
+    while (deudaRestante > 0 && meses < 120) {
       meses++;
       const interesMes = deudaRestante * tasaMensual;
       deudaRestante = deudaRestante + interesMes - pagoMensual;
-      totalPagado += pagoMensual;
+    }
+    
+    if (meses >= 120) {
+      return 'más de 10 años';
+    } else {
+      const años = Math.floor(meses / 12);
+      const mesesRestantes = meses % 12;
+      
+      let resultado = '';
+      
+      if (años > 0) {
+        resultado += `${años} ${años === 1 ? 'año' : 'años'}`;
+        if (mesesRestantes > 0) {
+          resultado += ` y ${mesesRestantes} ${mesesRestantes === 1 ? 'mes' : 'meses'}`;
+        }
+      } else {
+        resultado = `${mesesRestantes} ${mesesRestantes === 1 ? 'mes' : 'meses'}`;
+      }
+      
+      return resultado;
+    }
+  };
+
+  const calcularPagos = () => {
+    const tasaMensual = 0.15; // 15% mensual
+    const deudaDespuesDelPago = deudaActual - pagoMensual;
+    const interesesGenerados = deudaDespuesDelPago * tasaMensual;
+    const deudaSiguienteMes = deudaDespuesDelPago + interesesGenerados;
+    
+    let recomendacion = '';
+    let tipoAlerta = '';
+    let tiempoEstimado = '';
+
+    if (pagoMensual >= deudaActual) {
+      recomendacion = `🎉 ¡Excelente decisión! Estás pagando la totalidad de tu deuda. Esto te ahorrará $${formatearNumero(interesesGenerados)} en intereses y mantendrá tu historial crediticio en perfecto estado.`;
+      tipoAlerta = 'success';
+    } else if (pagoMensual < pagoMinimo) {
+      tiempoEstimado = calcularTiempoTotal(deudaSiguienteMes, pagoMensual, tasaMensual);
+      recomendacion = `⚠️ ¡Cuidado! Pagar menos que el mínimo ($${formatearNumero(pagoMinimo)}) afectará tu historial crediticio. Con este nivel de pago ($${formatearNumero(pagoMensual)}), la deuda crecerá significativamente y tomaría ${tiempoEstimado} liquidarla.`;
+      tipoAlerta = 'error';
+    } else if (pagoMensual === pagoMinimo) {
+      tiempoEstimado = calcularTiempoTotal(deudaSiguienteMes, pagoMensual, tasaMensual);
+      recomendacion = `⚠️ Pagando solo el mínimo, tu deuda seguirá creciendo significativamente por los intereses. Con este nivel de pago, tardarías ${tiempoEstimado} en liquidar la deuda. Intenta pagar más si es posible.`;
+      tipoAlerta = 'warning';
+    } else {
+      tiempoEstimado = calcularTiempoTotal(deudaSiguienteMes, pagoMensual, tasaMensual);
+      recomendacion = `✅ Buen pago! Estás pagando más que el mínimo, lo que ayudará a reducir tu deuda más rápido. Manteniendo este nivel de pago ($${formatearNumero(pagoMensual)}), podrías terminar de pagar en aproximadamente ${tiempoEstimado}.`;
+      tipoAlerta = 'success';
     }
 
     setResultados({
-      meses,
-      totalPagado,
-      interesesTotales: totalPagado - deudaActual,
-      pagoCompleto: deudaRestante <= 0
+      deudaActual,
+      pagoRealizado: pagoMensual,
+      deudaDespuesDelPago,
+      interesesGenerados,
+      deudaSiguienteMes,
+      recomendacion,
+      tipoAlerta,
+      tiempoEstimado
     });
   };
 
@@ -92,17 +141,13 @@ const CalculadoraPagos = () => {
           </div>
 
           <div>
-            <label className="block text-sm text-white/70 mb-2">¿Cuánto puedes pagar por mes?</label>
+            <label className="block text-sm text-white/70 mb-2">¿Cuánto vas a pagar este mes?</label>
             <input
               type="text"
               value={pagoMensual === 0 ? '' : pagoMensual.toString()}
               onChange={(e) => {
-                // Remover cualquier caracter que no sea número
                 const soloNumeros = e.target.value.replace(/[^\d]/g, '');
-                
-                // Convertir a número
                 const valor = soloNumeros ? Number(soloNumeros) : 0;
-                
                 setPagoMensual(valor);
               }}
               placeholder="Ingresa el monto sin puntos ni comas"
@@ -125,35 +170,40 @@ const CalculadoraPagos = () => {
 
         {resultados && (
           <div className="space-y-6">
-            <div className="p-4 bg-black/20 rounded-lg border border-white/10">
-              <h3 className="text-lg text-white/70 mb-4">Resultados</h3>
-              <div className="space-y-2">
+            <div className="p-6 bg-black/20 rounded-lg border border-white/10">
+              <h3 className="text-lg font-semibold text-white mb-4">Resultados del Escenario</h3>
+              
+              <div className="space-y-3">
                 <p className="text-white">
-                  Tiempo para pagar: <span className="font-bold text-[#FF00FF]">
-                    {resultados.pagoCompleto ? `${resultados.meses} meses` : 'Más de 10 años'}
-                  </span>
+                  Deuda actual: <span className="font-bold text-white">${formatearNumero(resultados.deudaActual)}</span>
                 </p>
                 <p className="text-white">
-                  Total a pagar: <span className="font-bold text-[#FF00FF]">
-                    ${formatearNumero(resultados.totalPagado)}
-                  </span>
+                  Pago a realizar: <span className="font-bold text-[#FF00FF]">${formatearNumero(resultados.pagoRealizado)}</span>
                 </p>
                 <p className="text-white">
-                  Solo en intereses: <span className="font-bold text-red-400">
-                    ${formatearNumero(resultados.interesesTotales)}
-                  </span>
+                  Deuda después del pago: <span className="font-bold text-white">${formatearNumero(resultados.deudaDespuesDelPago)}</span>
                 </p>
+                <p className="text-white">
+                  Intereses generados: <span className="font-bold text-red-400">${formatearNumero(resultados.interesesGenerados)}</span>
+                </p>
+                <p className="text-white">
+                  Deuda siguiente mes: <span className="font-bold text-red-400">${formatearNumero(resultados.deudaSiguienteMes)}</span>
+                </p>
+                {resultados.tiempoEstimado && pagoMensual !== deudaActual && (
+                  <p className="text-white mt-4 pt-4 border-t border-white/10">
+                    Tiempo estimado para pagar la totalidad: <span className="font-bold text-[#FF00FF]">{resultados.tiempoEstimado}</span>
+                  </p>
+                )}
               </div>
             </div>
 
-            {pagoMensual <= pagoMinimo && (
-              <div className="p-4 bg-red-500/10 rounded-lg border border-red-500/20">
-                <p className="text-sm text-red-400">
-                  ⚠️ Pagando solo el mínimo, tu deuda seguirá creciendo por los intereses.
-                  Intenta pagar más que el mínimo para salir de la deuda más rápido.
-                </p>
-              </div>
-            )}
+            <div className={`p-4 rounded-lg border ${
+              resultados.tipoAlerta === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' :
+              resultados.tipoAlerta === 'warning' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400' :
+              'bg-green-500/10 border-green-500/20 text-green-400'
+            }`}>
+              <p className="text-sm">{resultados.recomendacion}</p>
+            </div>
           </div>
         )}
       </div>

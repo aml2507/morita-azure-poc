@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/firebase-admin';
 import { anthropic } from '@/lib/anthropic';
 import pdfParse from 'pdf-parse/lib/pdf-parse.js';
+import { StatementCache } from '@/lib/cache/statementCache';
 
 // Asegurarse de que la ruta sea dinámica
 export const dynamic = 'force-dynamic';
@@ -44,8 +45,10 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.split('Bearer ')[1];
+    let userId;
     try {
-      await auth.verifyIdToken(token);
+      const decodedToken = await auth.verifyIdToken(token);
+      userId = decodedToken.uid; // Obtener el ID del usuario del token
     } catch (error) {
       console.error('Error verificando token:', error);
       return NextResponse.json(
@@ -72,91 +75,77 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    try {
-      console.log('Backend: Procesando archivo PDF');
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      
-      const options = {
-        max: 0,
-        version: 'default'
-      };
-
-      console.log('Backend: Iniciando extracción de texto');
-      const pdfData = await pdfParse(buffer, options);
-      const pdfText = pdfData.text;
-      console.log('Backend: Texto extraído, longitud:', pdfText.length);
-
-      console.log('Backend: Enviando texto a Claude');
-      const message = await anthropic.messages.create({
-        model: "claude-3-sonnet-20240229",
-        max_tokens: 4096,
-        messages: [{
-          role: "user",
-          content: `Analiza este resumen de tarjeta de crédito y extrae SOLO la siguiente información en formato JSON, sin incluir ningún texto adicional o markdown:
-            {
-              "deudaActual": number,
-              "pagoMinimo": number,
-              "fechaVencimiento": string,
-              "distribucionGastos": [
-                {
-                  "categoria": string,
-                  "monto": number
-                }
-              ],
-              "simulacionPagoMinimo": {
-                "totalPagar": number,
-                "tiempoEstimado": string,
-                "interesesTotales": number
-              },
-              "recomendaciones": string[]
-            }
-
-            Si no puedes encontrar algún valor, usa null.
-            Resumen:
-            ${pdfText}
-          `
-        }]
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const pdfData = await pdfParse(buffer);
+    
+    // Extraer datos relevantes para el hash
+    const statementData = extractStatementData(pdfData.text);
+    
+    // Verificar caché (usar userId en lugar de auth.uid)
+    const cachedAnalysis = await StatementCache.get(statementData, userId);
+    if (cachedAnalysis) {
+      console.log('Cache hit! Returning cached analysis');
+      return new Response(JSON.stringify({ 
+        analysis: cachedAnalysis, 
+        fromCache: true,
+        success: true 
+      }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
       });
-
-      console.log('Backend: Respuesta recibida de Claude');
-      let analysis;
-      try {
-        const responseText = message.content[0].text.trim();
-        console.log('Backend: Texto de respuesta:', responseText);
-        analysis = JSON.parse(responseText);
-        console.log('Backend: Análisis parseado correctamente');
-      } catch (parseError) {
-        console.error('Backend: Error al parsear respuesta de Claude:', parseError);
-        throw new Error('Error al procesar la respuesta del análisis');
-      }
-
-      return new Response(
-        JSON.stringify({ analysis, success: true }),
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            ...corsHeaders,
-          },
-        }
-      );
-    } catch (error) {
-      console.error('Error procesando PDF:', error);
-      return new Response(
-        JSON.stringify({ 
-          error: error instanceof Error ? error.message : 'Error al procesar el PDF',
-          success: false 
-        }),
-        {
-          status: 500,
-          headers: {
-            'Content-Type': 'application/json',
-            ...corsHeaders,
-          },
-        }
-      );
     }
+
+    // Si no hay caché, realizar el análisis
+    const message = await anthropic.messages.create({
+      model: "claude-3-sonnet-20240229",
+      max_tokens: 4096,
+      messages: [{
+        role: "user",
+        content: `Analiza este resumen de tarjeta de crédito y extrae SOLO la siguiente información en formato JSON, sin incluir ningún texto adicional o markdown:
+          {
+            "deudaActual": number,
+            "pagoMinimo": number,
+            "fechaVencimiento": string,
+            "distribucionGastos": [
+              {
+                "categoria": string,
+                "monto": number
+              }
+            ],
+            "simulacionPagoMinimo": {
+              "totalPagar": number,
+              "tiempoEstimado": string,
+              "interesesTotales": number
+            },
+            "recomendaciones": string[]
+          }
+
+          Si no puedes encontrar algún valor, usa null.
+          Resumen:
+          ${pdfData.text}
+        `
+      }]
+    });
+
+    const analysis = JSON.parse(message.content[0].text.trim());
+    
+    // Guardar en caché (usar userId en lugar de auth.uid)
+    await StatementCache.set(statementData, analysis, userId);
+
+    return new Response(
+      JSON.stringify({ analysis, success: true }),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
+      }
+    );
   } catch (error) {
     console.error('Error en el endpoint:', error);
     return NextResponse.json(
@@ -167,4 +156,13 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+function extractStatementData(pdfText: string) {
+  // Extraer datos relevantes del texto del PDF
+  return {
+    transactions: [], // Aquí deberías implementar la extracción de transacciones
+    totalAmount: 0,   // Extraer monto total
+    statementDate: new Date().toISOString().split('T')[0] // Fecha del resumen
+  };
 } 

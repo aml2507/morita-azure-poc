@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import PageLayout from "@/components/Common/PageLayout";
-import PaymentCalculator from "@/components/Calculadora/PaymentCalculator";
+import CalculadoraPagos from '@/components/Calculadora/CalculadoraPagos';
 
 export const metadata: Metadata = {
   title: "Calculadora de Pagos | Morita",
@@ -13,7 +13,7 @@ export default function CalculadoraPage() {
       title="Calculadora de Pagos"
       description="Simula diferentes escenarios de pago y encuentra la mejor opción para ti."
     >
-      <PaymentCalculator />
+      <CalculadoraPagos />
     </PageLayout>
   );
 } 

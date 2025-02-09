@@ -6,14 +6,15 @@ import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useAnalysisLimit } from "./AnalysisLimit";
+import { toast } from 'react-hot-toast';
 
 const PdfUploader = () => {
   const [file, setFile] = useState<File | null>(null);
   const [analysis, setAnalysis] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
   const { hasReachedLimit } = useAnalysisLimit();
+  const [isLoading, setIsLoading] = useState(false);
 
   // Verificar autenticación al inicio y en cambios
   useEffect(() => {
@@ -27,10 +28,18 @@ const PdfUploader = () => {
     return () => unsubscribe();
   }, [router]);
 
+  // Al inicio del componente, intentar cargar datos previos
+  useEffect(() => {
+    const savedAnalysis = localStorage.getItem('lastAnalysis');
+    if (savedAnalysis) {
+      setAnalysis(JSON.parse(savedAnalysis));
+    }
+  }, []);
+
   // Debug render
   console.log('Renderizando PdfUploader:', {
     tieneArchivo: !!file,
-    estadoLoading: loading,
+    estadoLoading: false,
     tieneAnalisis: !!analysis,
     error
   });
@@ -51,85 +60,73 @@ const PdfUploader = () => {
     }
   };
 
-  const handleUpload = async (file: File) => {
+  const handleDrop = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const droppedFile = event.dataTransfer.files[0];
+    if (droppedFile) {
+      if (droppedFile.type !== 'application/pdf') {
+        setError('Por favor, selecciona un archivo PDF válido');
+        return;
+      }
+      if (droppedFile.size > 10 * 1024 * 1024) {
+        setError('El archivo es demasiado grande. Máximo 10MB');
+        return;
+      }
+      setFile(droppedFile);
+      setError('');
+    }
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleSubmit = async (file: File) => {
+    setIsLoading(true);
+    setError(null);
+
     try {
-      const user = auth.currentUser;
-      if (!user) {
-        setError("Debes iniciar sesión para continuar");
-        router.push("/signin");
-        return;
-      }
-
-      if (hasReachedLimit) {
-        setError("Has alcanzado el límite de análisis gratuitos");
-        return;
-      }
-
-      setLoading(true);
-      setError("");
-
-      const token = await user.getIdToken();
       const formData = new FormData();
       formData.append('pdf', file);
-
-      console.log('Enviando archivo:', {
-        nombre: file.name,
-        tamaño: file.size,
-        tipo: file.type
-      });
 
       const response = await fetch('/api/analyze-pdf', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${await auth.currentUser?.getIdToken()}`
         },
         body: formData,
       });
 
-      const responseText = await response.text();
-      console.log('Respuesta completa:', responseText);
-
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${responseText}`);
-      }
-
-      const data = JSON.parse(responseText);
-      console.log('Respuesta parseada:', data);
+      const data = await response.json();
 
       if (!data.success) {
         throw new Error(data.error || 'Error al analizar el PDF');
       }
 
-      try {
-        const docRef = await addDoc(collection(db, "analyses"), {
-          userId: user.uid,
-          timestamp: serverTimestamp(),
-          analysis: data.analysis,
-          createdAt: new Date().toISOString()
-        });
-        console.log("Análisis guardado con ID:", docRef.id);
-      } catch (firestoreError: any) {
-        console.error("Error al guardar en Firestore:", {
-          code: firestoreError.code,
-          message: firestoreError.message,
-          details: firestoreError
-        });
-        setError("Error al guardar el análisis: " + firestoreError.message);
+      if (data.fromCache) {
+        toast.success('Análisis recuperado del caché! 🚀');
       }
 
       setAnalysis(data.analysis);
-    } catch (err) {
-      console.error('Error:', err);
-      setError(err instanceof Error ? err.message : 'Error al procesar el archivo');
+      localStorage.setItem('lastAnalysis', JSON.stringify(data.analysis)); // Guardar en localStorage
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Error desconocido');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   // Agregar un efecto para monitorear los cambios de estado
   useEffect(() => {
-    console.log('Estado actual:', { loading, analysis, error });
-  }, [loading, analysis, error]);
+    console.log('Estado actual:', { 
+      loading: false,
+      analysis, 
+      error 
+    });
+  }, [analysis, error]);
 
   // Renderizado condicional
   const content = analysis ? (
@@ -320,7 +317,12 @@ const PdfUploader = () => {
       {/* Botón para nuevo análisis */}
       <div className="text-center">
         <button
-          onClick={() => setAnalysis(null)}
+          onClick={() => {
+            setAnalysis(null);
+            setFile(null);
+            setError("");
+            localStorage.removeItem('lastAnalysis'); // Limpiar localStorage
+          }}
           className="px-8 py-3 text-white bg-gradient-to-r from-[#FF00FF] to-purple-600 rounded-lg hover:opacity-90 transition-opacity shadow-[0_0_20px_rgba(255,0,255,0.3)]"
         >
           Analizar Otro Resumen
@@ -331,10 +333,14 @@ const PdfUploader = () => {
     <div className="w-full max-w-xl p-8 bg-black/20 backdrop-blur-lg rounded-2xl shadow-xl border border-white/10">
       <form onSubmit={(e) => {
         e.preventDefault();
-        if (file) handleUpload(file);
+        if (file) handleSubmit(file);
       }} className="space-y-6">
         <div className="flex flex-col items-center justify-center w-full">
-          <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer border-white/10 hover:border-[#FF00FF]/50 transition-colors">
+          <label 
+            className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer border-white/10 hover:border-[#FF00FF]/50 transition-colors"
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+          >
             <div className="flex flex-col items-center justify-center pt-5 pb-6">
               {file ? (
                 <>
@@ -369,10 +375,10 @@ const PdfUploader = () => {
 
         <button
           type="submit"
-          disabled={!file || loading}
+          disabled={!file || isLoading}
           className="w-full px-4 py-2 text-white bg-[#FF00FF] hover:bg-[#FF00FF]/80 disabled:opacity-50 rounded-lg transition-colors shadow-[0_0_20px_rgba(255,0,255,0.3)]"
         >
-          {loading ? (
+          {isLoading ? (
             <div className="flex items-center justify-center">
               <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

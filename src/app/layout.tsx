@@ -2,6 +2,7 @@ import Header from "@/components/Header";
 import { Inter } from "next/font/google";
 import "../styles/index.css";
 import { Metadata } from "next";
+import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -47,6 +48,30 @@ export default function RootLayout({
 
         {/* Contenido */}
         <div className="relative z-10 min-h-screen">
+          <div className="relative z-[1000000]">
+            <Toaster 
+              position="top-right"
+              containerStyle={{
+                top: '6rem', // Espacio para el header
+                right: '1rem',
+              }}
+              toastOptions={{
+                style: {
+                  background: '#2D1B69',
+                  color: '#fff',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  zIndex: 1000000,
+                },
+                success: {
+                  duration: 3000,
+                  iconTheme: {
+                    primary: '#4ade80',
+                    secondary: '#2D1B69',
+                  },
+                },
+              }}
+            />
+          </div>
           {children}
         </div>
       </body>

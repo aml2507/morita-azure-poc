@@ -1,6 +1,7 @@
 import ScrollUp from "@/components/Common/ScrollUp";
 import Hero from "@/components/Hero";
 import Features from "@/components/Features";
+import ContactForm from "@/components/Contact/ContactForm";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -20,6 +21,7 @@ export default function Home() {
       <ScrollUp />
       <Hero />
       <Features />
+      <ContactForm />
     </>
   );
 }

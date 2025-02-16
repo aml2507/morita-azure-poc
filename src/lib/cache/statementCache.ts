@@ -1,6 +1,7 @@
 import { db } from '@/lib/firebase-admin';
 import { generateStatementHash } from './hashGenerator';
 import { encrypt, decrypt } from '@/lib/encryption';
+import { createHash } from 'crypto';
 
 interface CacheEntry {
   analysis: any;
@@ -13,9 +14,9 @@ export class StatementCache {
   private static CACHE_EXPIRATION = 30 * 24 * 60 * 60 * 1000; // 30 días en ms
   private static COLLECTION = 'statement-cache';
 
-  static async get(data: any, userId: string): Promise<any | null> {
+  static async get(pdfText: string, userId: string): Promise<any | null> {
     try {
-      const hash = generateStatementHash(data);
+      const hash = generateStatementHash(pdfText);
       const cacheRef = db.collection(this.COLLECTION).doc(hash);
       const cache = await cacheRef.get();
 
@@ -44,16 +45,14 @@ export class StatementCache {
     }
   }
 
-  static async set(data: any, analysis: any, userId: string): Promise<void> {
+  static async set(data: { text: string; analysis: any; timestamp: number }, userId: string) {
     try {
-      const hash = generateStatementHash(data);
-      const encryptedAnalysis = encrypt(analysis);
-
+      const hash = generateStatementHash(data.text);
       await db.collection(this.COLLECTION).doc(hash).set({
-        analysis: encryptedAnalysis,
-        createdAt: Date.now(),
-        userId,
-        hash
+        analysis: data.analysis,
+        createdAt: data.timestamp,
+        userId: userId,
+        hash: hash
       });
     } catch (error) {
       console.error('Error setting cache:', error);
@@ -85,5 +84,9 @@ export class StatementCache {
     } catch (error) {
       console.error('Error cleaning up cache:', error);
     }
+  }
+
+  static generateHash(pdfText: string): string {
+    return createHash('sha256').update(pdfText).digest('hex');
   }
 } 

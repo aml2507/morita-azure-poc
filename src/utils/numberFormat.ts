@@ -13,4 +13,10 @@ export function formatearNumero(numero: number): string {
   
   // Unir con coma
   return `${enteraFormateada},${decimalFormateada}`;
+}
+
+export function formatearTasa(valor: number): string {
+  // Si el valor es mayor a 1, asumimos que ya está en porcentaje
+  const porcentaje = valor > 1 ? valor : valor * 100;
+  return porcentaje.toFixed(2).replace('.', ',') + '%';
 } 

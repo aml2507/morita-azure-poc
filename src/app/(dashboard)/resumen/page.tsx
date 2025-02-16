@@ -1,12 +1,19 @@
-import { Metadata } from "next";
+'use client';
+
+import { useSearchParams, useRouter } from 'next/navigation';
 import PdfUploader from "@/components/Resumen/PdfUploader";
 
-export const metadata: Metadata = {
-  title: "Analizador de Resúmenes | Morita",
-  description: "Sube tu resumen de tarjeta de crédito y obtén un análisis detallado de tus gastos, patrones de consumo y recomendaciones personalizadas.",
-}; 
+export default function ResumenPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const id = searchParams.get('id');
 
-const ResumenPage = () => {
+  const handleReset = () => {
+    // Limpiar localStorage y redirigir
+    localStorage.removeItem('savedAnalyses');
+    window.location.href = '/resumen';
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto pt-24">
@@ -55,11 +62,9 @@ const ResumenPage = () => {
 
         {/* Sección de carga de PDF */}
         <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-8 border border-white/10">
-          <PdfUploader />
+          <PdfUploader initialAnalysisId={id} onReset={handleReset} />
         </div>
       </div>
     </div>
   );
-};
-
-export default ResumenPage; 
+} 

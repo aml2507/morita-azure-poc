@@ -1,55 +1,59 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { auth, db } from "@/lib/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
 
 export function useAnalysisLimit() {
-  const [analysisCount, setAnalysisCount] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
-  const FREE_LIMIT = 2;
+  const [hasReachedLimit, setHasReachedLimit] = useState(false);
 
   useEffect(() => {
-    async function fetchAnalysisCount() {
-      if (!auth.currentUser) {
-        setLoading(false);
+    const checkLimit = () => {
+      // Obtener el mes actual
+      const currentMonth = new Date().getMonth();
+      
+      // Obtener análisis guardados del localStorage
+      const savedAnalyses = JSON.parse(localStorage.getItem('monthlyAnalyses') || '{}');
+      
+      // Si el mes guardado es diferente al actual, resetear el contador
+      if (savedAnalyses.month !== currentMonth) {
+        localStorage.setItem('monthlyAnalyses', JSON.stringify({
+          month: currentMonth,
+          count: 0
+        }));
+        setHasReachedLimit(false);
         return;
       }
 
-      try {
-        const q = query(
-          collection(db, "analyses"),
-          where("userId", "==", auth.currentUser.uid)
-        );
-        const querySnapshot = await getDocs(q);
-        setAnalysisCount(querySnapshot.size);
-      } catch (error) {
-        console.error("Error fetching analysis count:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
+      // Verificar si se alcanzó el límite
+      setHasReachedLimit(savedAnalyses.count >= 2);
+    };
 
-    fetchAnalysisCount();
+    checkLimit();
   }, []);
 
-  return {
-    analysisCount,
-    remainingAnalyses: FREE_LIMIT - analysisCount,
-    hasReachedLimit: analysisCount >= FREE_LIMIT,
-    loading
+  const incrementAnalysisCount = () => {
+    const savedAnalyses = JSON.parse(localStorage.getItem('monthlyAnalyses') || '{}');
+    const currentMonth = new Date().getMonth();
+    
+    const newCount = (savedAnalyses.month === currentMonth ? savedAnalyses.count : 0) + 1;
+    
+    localStorage.setItem('monthlyAnalyses', JSON.stringify({
+      month: currentMonth,
+      count: newCount
+    }));
+
+    setHasReachedLimit(newCount >= 2);
   };
+
+  return { hasReachedLimit, incrementAnalysisCount };
 }
 
 export default function AnalysisLimit() {
-  const { remainingAnalyses, loading } = useAnalysisLimit();
-
-  if (loading) return null;
+  const { hasReachedLimit } = useAnalysisLimit();
 
   return (
     <div className="text-center mb-4">
       <p className="text-white/70">
-        Te quedan <span className="text-[#FF00FF] font-bold">{remainingAnalyses}</span> análisis gratuitos
+        {hasReachedLimit ? "Has alcanzado el límite de 2 análisis por mes" : "Te quedan análisis gratuitos"}
       </p>
     </div>
   );

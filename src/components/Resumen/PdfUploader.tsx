@@ -147,7 +147,7 @@ const PdfUploader = ({ initialAnalysisId, onReset }: PdfUploaderProps) => {
   const [currentAnalysisId, setCurrentAnalysisId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const { hasReachedLimit } = useAnalysisLimit();
+  const { hasReachedLimit, analysisCount, monthlyLimit, isLoading: limitLoading, refreshLimit } = useAnalysisLimit();
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<{ fromCache?: boolean } | null>(null);
 
@@ -230,35 +230,36 @@ const PdfUploader = ({ initialAnalysisId, onReset }: PdfUploaderProps) => {
     setError(null);
 
     try {
+      // Generar hash del PDF
+      const pdfText = await file.text();
+      const pdfHash = generateStatementHash(pdfText);
+      
+      // Verificar caché local
+      const savedAnalysesCache = localStorage.getItem('savedAnalyses');
+      if (savedAnalysesCache) {
+        const analysesCache = JSON.parse(savedAnalysesCache);
+        if (analysesCache[pdfHash]) {
+          console.log('Análisis encontrado en caché local');
+          setAnalyses(prevAnalyses => ({
+            ...prevAnalyses,
+            [pdfHash]: analysesCache[pdfHash]
+          }));
+          setCurrentAnalysisId(pdfHash);
+          setIsLoading(false);
+          toast.success('Resumen recuperado de caché');
+          return;
+        }
+      }
+
       const formData = new FormData();
       formData.append('pdf', file);
+      formData.append('hash', pdfHash);
 
-      // Obtener el token de autenticación
       const token = await auth.currentUser?.getIdToken();
       if (!token) {
         throw new Error('No estás autenticado');
       }
 
-      // Verificar si ya analizó este resumen
-      const pdfText = await file.text();
-      const pdfHash = generateStatementHash(pdfText);
-      
-      // Verificar si este resumen ya fue analizado
-      if (analyses[pdfHash]) {
-        setIsLoading(false);
-        toast.error('Ya analizaste este resumen anteriormente');
-        return;
-      }
-
-      // Verificar límite mensual
-      if (hasReachedLimit) {
-        setIsLoading(false);
-        toast.error('Solo puedes analizar 2 resúmenes por mes. Intenta nuevamente el próximo mes.');
-        return;
-      }
-
-      console.log('Enviando PDF para análisis...');
-      
       const response = await fetch('/api/analyze-pdf', {
         method: 'POST',
         headers: {
@@ -267,51 +268,30 @@ const PdfUploader = ({ initialAnalysisId, onReset }: PdfUploaderProps) => {
         body: formData,
       });
 
-      const data = await response.json();
-      setResponse(data);
-      console.log('Respuesta del servidor:', {
-        success: data.success,
-        fromCache: data.fromCache,
-        analysisId: data.analysisId
-      });
+      const result = await response.json();
 
-      if (!data.success || !data.analysisId || !data.analysis) {
-        console.error('Datos incompletos:', data);
-        throw new Error('La respuesta no contiene los datos necesarios');
+      if (response.ok && result.success) {
+        // Actualizar caché local
+        const updatedAnalyses = {
+          ...analyses,
+          [pdfHash]: result.analysis
+        };
+        localStorage.setItem('savedAnalyses', JSON.stringify(updatedAnalyses));
+
+        // Actualizar estado
+        setAnalyses(updatedAnalyses);
+        setCurrentAnalysisId(pdfHash);
+        
+        // Forzar actualización del límite
+        await refreshLimit?.();
+
+        toast.success('Resumen analizado correctamente');
+      } else {
+        setError(result.error || 'Error al analizar el PDF');
       }
-
-      // Actualizar el estado con el nuevo análisis
-      const newAnalysis = {
-        ...data.analysis,
-        timestamp: Date.now(),
-        id: data.analysisId
-      };
-
-      // Guardar en localStorage y actualizar estado
-      const updatedAnalyses = {
-        ...analyses,
-        [data.analysisId]: newAnalysis
-      };
-
-      localStorage.setItem('savedAnalyses', JSON.stringify(updatedAnalyses));
-      setAnalyses(updatedAnalyses);
-      setCurrentAnalysisId(data.analysisId);
-      setFile(null);
-
-      // Actualizar la URL sin recargar la página
-      window.history.pushState(
-        { analysisId: data.analysisId },
-        '',
-        `/resumen?id=${data.analysisId}`
-      );
-
-      toast.success('Resumen analizado correctamente');
-
     } catch (error) {
-      console.error('Error detallado:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido al analizar el PDF';
-      setError(errorMessage);
-      toast.error(errorMessage);
+      console.error('Error:', error);
+      setError('Error al procesar el archivo');
     } finally {
       setIsLoading(false);
     }
@@ -591,6 +571,15 @@ const PdfUploader = ({ initialAnalysisId, onReset }: PdfUploaderProps) => {
               Analizar Otro Resumen
             </button>
           </div>
+
+          {/* Mostrar contador de análisis restantes */}
+          {!hasReachedLimit && (
+            <div className="text-center mt-4">
+              <p className="text-sm text-white/50">
+                Te quedan {monthlyLimit - analysisCount} análisis disponibles este mes
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/firebase-admin';
+import { auth, db } from '@/lib/firebase-admin';
 import { anthropic } from '@/lib/anthropic';
 import pdfParse from 'pdf-parse/lib/pdf-parse.js';
-import { StatementCache } from '@/lib/cache/statementCache';
 import { AnalysisResult } from '@/types/analysis';
 import { generateStatementHash } from '@/lib/cache/hashGenerator';
 
@@ -37,7 +36,16 @@ export async function OPTIONS() {
 
 export async function POST(request: NextRequest) {
   try {
-    // Verificar el token de autenticación
+    // Verificar que Firebase Admin esté inicializado
+    if (!db || !auth) {
+      console.error('Firebase Admin no está inicializado');
+      return NextResponse.json(
+        { error: 'Error de configuración del servidor', success: false },
+        { status: 500 }
+      );
+    }
+
+    // Verificar autenticación
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
@@ -46,75 +54,157 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const token = authHeader.split('Bearer ')[1];
     let userId;
     try {
+      const token = authHeader.split('Bearer ')[1];
       const decodedToken = await auth.verifyIdToken(token);
       userId = decodedToken.uid;
     } catch (error) {
-      console.error('Error verificando token:', error);
+      console.error('Error al verificar token:', error);
       return NextResponse.json(
         { error: 'Token inválido', success: false },
         { status: 401 }
       );
     }
 
+    // Verificar límite mensual
+    try {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const analysisSnapshot = await db
+        .collection('analyses')
+        .where('userId', '==', userId)
+        .where('createdAt', '>=', startOfMonth)
+        .get();
+
+      if (analysisSnapshot.size >= 2) {
+        return NextResponse.json(
+          { 
+            error: '⚠️ Has alcanzado el límite de 2 análisis este mes. Podrás analizar más resúmenes el próximo mes.',
+            success: false 
+          },
+          { status: 429 }
+        );
+      }
+    } catch (error) {
+      console.error('Error al verificar límite:', error);
+      return NextResponse.json(
+        { error: 'Error al verificar límite de análisis', success: false },
+        { status: 500 }
+      );
+    }
+
     // Procesar el archivo
     const formData = await request.formData();
-    const file = formData.get('pdf');
-
-    if (!file || !(file instanceof File)) {
+    const pdfFile = formData.get('pdf');
+    
+    if (!pdfFile || !(pdfFile instanceof Blob)) {
       return NextResponse.json(
-        { error: 'No se encontró el archivo', success: false },
+        { error: 'Archivo PDF requerido', success: false },
         { status: 400 }
       );
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const pdfData = await pdfParse(buffer);
-    
-    // Generar hash del contenido del PDF
-    const pdfHash = generateStatementHash(pdfData.text);
-    
-    console.log('Verificando caché para hash:', pdfHash); // Log para debug
-    
-    // Intentar obtener del caché
-    const cachedAnalysis = await StatementCache.get(pdfData.text, userId);
-    if (cachedAnalysis) {
-      console.log('✅ Análisis recuperado del caché');
-      return NextResponse.json({
-        success: true,
-        analysisId: pdfHash,
-        analysis: cachedAnalysis
-      });
+    // Convertir el archivo a buffer
+    let pdfBuffer;
+    try {
+      const arrayBuffer = await pdfFile.arrayBuffer();
+      pdfBuffer = Buffer.from(arrayBuffer);
+    } catch (error) {
+      console.error('Error al procesar el archivo:', error);
+      return NextResponse.json(
+        { error: 'Error al procesar el archivo PDF', success: false },
+        { status: 400 }
+      );
     }
 
-    console.log('❌ No se encontró en caché, analizando con Claude...');
-    
-    // Si no está en caché, analizar con Claude
-    const analysis = await analyzeWithClaude(pdfData.text);
-    
-    // Guardar en caché
-    await StatementCache.set({
-      text: pdfData.text,
-      analysis,
-      timestamp: Date.now()
-    }, userId);
+    // Extraer texto del PDF
+    let pdfText;
+    try {
+      const pdfData = await pdfParse(pdfBuffer);
+      pdfText = pdfData.text;
+    } catch (error) {
+      console.error('Error al extraer texto del PDF:', error);
+      return NextResponse.json(
+        { error: 'Error al leer el contenido del PDF', success: false },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json({
-      success: true,
-      analysisId: pdfHash,
-      analysis
-    });
+    // Generar hash
+    const hash = generateStatementHash(pdfText);
+
+    // Verificar caché
+    try {
+      const cacheSnapshot = await db
+        .collection('cache')
+        .where('hash', '==', hash)
+        .limit(1)
+        .get();
+
+      if (!cacheSnapshot.empty) {
+        const cachedData = cacheSnapshot.docs[0].data();
+        return NextResponse.json({
+          success: true,
+          fromCache: true,
+          analysis: cachedData.analysis,
+          analysisId: hash
+        });
+      }
+    } catch (error) {
+      console.error('Error al verificar caché:', error);
+      // Continuar con el análisis aunque falle la verificación de caché
+    }
+
+    // Analizar con Claude
+    let analysis;
+    try {
+      analysis = await analyzeWithClaude(pdfText);
+    } catch (error) {
+      console.error('Error en análisis con Claude:', error);
+      return NextResponse.json(
+        { error: 'Error al analizar el documento', success: false },
+        { status: 500 }
+      );
+    }
+
+    // Guardar resultados
+    try {
+      // Guardar en caché
+      await db.collection('cache').add({
+        hash,
+        analysis,
+        userId,
+        createdAt: new Date()
+      });
+
+      // Registrar análisis
+      await db.collection('analyses').add({
+        userId,
+        hash,
+        createdAt: new Date()
+      });
+
+      return NextResponse.json({
+        success: true,
+        fromCache: false,
+        analysis,
+        analysisId: hash
+      });
+    } catch (error) {
+      console.error('Error al guardar resultados:', error);
+      return NextResponse.json(
+        { error: 'Error al guardar resultados', success: false },
+        { status: 500 }
+      );
+    }
 
   } catch (error) {
-    console.error('Error en el endpoint:', error);
+    console.error('Error general:', error);
     return NextResponse.json(
-      { 
-        error: error instanceof Error ? error.message : 'Error interno del servidor',
-        success: false 
-      },
+      { error: 'Error interno del servidor', success: false },
       { status: 500 }
     );
   }

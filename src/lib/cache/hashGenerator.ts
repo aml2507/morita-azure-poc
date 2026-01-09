@@ -37,23 +37,22 @@ export function generateHash(data: StatementData): string {
     .digest('hex');
 }
 
-export function generateStatementHash(pdfText: string): string {
-  // Normalizar el texto antes de generar el hash
-  const normalizedText = pdfText
-    .trim()
+export function generateStatementHash(content: string): string {
+  // Limpiar el contenido de espacios en blanco y convertir a minúsculas
+  const cleanContent = content
     .toLowerCase()
-    // Eliminar espacios múltiples
-    .replace(/\s+/g, ' ')
-    // Eliminar caracteres especiales
-    .replace(/[^\w\s]/g, '')
-    // Eliminar números de tarjeta y otros datos sensibles
-    .replace(/\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}/g, 'CARDNUMBER')
-    .replace(/\b\d{16}\b/g, 'CARDNUMBER');
+    .replace(/\s+/g, '')
+    .trim();
 
-  // Generar hash SHA-256
-  return createHash('sha256')
-    .update(normalizedText)
-    .digest('hex');
+  // Usar un algoritmo simple de hashing
+  let hash = 0;
+  for (let i = 0; i < cleanContent.length; i++) {
+    const char = cleanContent.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convertir a 32bit integer
+  }
+
+  return hash.toString(16); // Convertir a hexadecimal
 }
 
 // Función para verificar si dos resúmenes son similares

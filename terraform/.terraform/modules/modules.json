@@ -1,0 +1,1 @@
+{"Modules":[{"Key":"","Source":"","Dir":"."},{"Key":"app_service","Source":"./modules/app-service","Dir":"modules/app-service"},{"Key":"monitoring","Source":"./modules/monitoring","Dir":"modules/monitoring"},{"Key":"network","Source":"./modules/network","Dir":"modules/network"},{"Key":"openai","Source":"./modules/openai","Dir":"modules/openai"}]}

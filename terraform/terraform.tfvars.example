@@ -1,0 +1,45 @@
+# =============================================================================
+# Terraform Variables Example
+# =============================================================================
+# Copy this file to terraform.tfvars and fill in your values.
+# Note: When using Terraform Cloud, set these as workspace variables.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Required Variables (no defaults)
+# -----------------------------------------------------------------------------
+admin_email = "your-email@example.com"  # Required for budget alerts
+
+# -----------------------------------------------------------------------------
+# Optional Variables (have defaults, uncomment to override)
+# -----------------------------------------------------------------------------
+
+# General
+# project_name = "morita"
+# environment  = "poc"
+# location     = "westeurope"
+
+# Networking
+# vnet_address_space = ["10.0.0.0/16"]
+# app_subnet_prefix  = ["10.0.1.0/24"]
+# pe_subnet_prefix   = ["10.0.2.0/24"]
+
+# Azure OpenAI
+# openai_sku           = "S0"
+# openai_model_name    = "gpt-4"
+# openai_model_version = "0613"
+# openai_model_capacity = 10
+
+# App Service
+# app_service_sku = "B1"
+# node_version    = "20-lts"
+
+# Monitoring & Budget
+# budget_amount          = 10
+# budget_alert_threshold = 80
+
+# Additional tags (merged with common tags)
+# tags = {
+#   CostCenter = "Engineering"
+#   Team       = "Platform"
+# }

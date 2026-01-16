@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, db } from '@/lib/firebase-admin';
+import { db } from '@/lib/firebase-admin';
 import { anthropic } from '@/lib/anthropic';
 import pdfParse from 'pdf-parse/lib/pdf-parse.js';
 import { AnalysisResult } from '@/types/analysis';
@@ -37,7 +37,7 @@ export async function OPTIONS() {
 export async function POST(request: NextRequest) {
   try {
     // Verificar que Firebase Admin esté inicializado
-    if (!db || !auth) {
+    if (!db) {
       console.error('Firebase Admin no está inicializado');
       return NextResponse.json(
         { error: 'Error de configuración del servidor', success: false },
@@ -45,56 +45,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar autenticación
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'No autorizado', success: false },
-        { status: 401 }
-      );
-    }
-
-    let userId;
-    try {
-      const token = authHeader.split('Bearer ')[1];
-      const decodedToken = await auth.verifyIdToken(token);
-      userId = decodedToken.uid;
-    } catch (error) {
-      console.error('Error al verificar token:', error);
-      return NextResponse.json(
-        { error: 'Token inválido', success: false },
-        { status: 401 }
-      );
-    }
-
-    // Verificar límite mensual
-    try {
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
-
-      const analysisSnapshot = await db
-        .collection('analyses')
-        .where('userId', '==', userId)
-        .where('createdAt', '>=', startOfMonth)
-        .get();
-
-      if (analysisSnapshot.size >= 2) {
-        return NextResponse.json(
-          { 
-            error: '⚠️ Has alcanzado el límite de 2 análisis este mes. Podrás analizar más resúmenes el próximo mes.',
-            success: false 
-          },
-          { status: 429 }
-        );
-      }
-    } catch (error) {
-      console.error('Error al verificar límite:', error);
-      return NextResponse.json(
-        { error: 'Error al verificar límite de análisis', success: false },
-        { status: 500 }
-      );
-    }
+    // POC: Autenticación deshabilitada - usar userId anónimo
+    const userId = 'poc-anonymous-user';
 
     // Procesar el archivo
     const formData = await request.formData();

@@ -2,9 +2,6 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { formatearNumero, formatearTasa } from '@/utils/numberFormat';
-import { useRouter } from "next/navigation";
-import { auth, db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useAnalysisLimit } from "./AnalysisLimit";
 import { toast } from 'react-hot-toast';
 import { formatearFecha } from "@/utils/dateFormat";
@@ -146,22 +143,10 @@ const PdfUploader = ({ initialAnalysisId, onReset }: PdfUploaderProps) => {
   const [analyses, setAnalyses] = useState<{[key: string]: AnalysisResult}>({});
   const [currentAnalysisId, setCurrentAnalysisId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
+  // POC: Autenticación deshabilitada
   const { hasReachedLimit, analysisCount, monthlyLimit, isLoading: limitLoading, refreshLimit } = useAnalysisLimit();
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<{ fromCache?: boolean } | null>(null);
-
-  // Verificar autenticación al inicio y en cambios
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (!user) {
-        const currentPath = window.location.pathname;
-        router.push(`/signin?returnUrl=${encodeURIComponent(currentPath)}`);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [router]);
 
   // Al inicio del componente, intentar cargar datos previos
   useEffect(() => {
@@ -255,16 +240,9 @@ const PdfUploader = ({ initialAnalysisId, onReset }: PdfUploaderProps) => {
       formData.append('pdf', file);
       formData.append('hash', pdfHash);
 
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) {
-        throw new Error('No estás autenticado');
-      }
-
+      // POC: Autenticación deshabilitada - no enviar token
       const response = await fetch('/api/analyze-pdf', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
         body: formData,
       });
 

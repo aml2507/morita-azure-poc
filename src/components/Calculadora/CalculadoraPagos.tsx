@@ -1,37 +1,23 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { formatearNumero } from '@/utils/numberFormat';
-import { auth } from "@/lib/firebase";
-import { useRouter } from "next/navigation";
 
 const CalculadoraPagos = () => {
-  const router = useRouter();
   const [deudaActual, setDeudaActual] = useState<number>(0);
   const [pagoMinimo, setPagoMinimo] = useState<number>(0);
   const [pagoMensual, setPagoMensual] = useState<number>(0);
   const [resultados, setResultados] = useState<any>(null);
 
-  // Verificar autenticación al inicio y en cambios
+  // POC: Autenticación deshabilitada - cargar datos directamente
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (!user) {
-        localStorage.removeItem('lastAnalysis'); // Limpiar datos al no tener usuario
-        const currentPath = window.location.pathname;
-        router.push(`/signin?returnUrl=${encodeURIComponent(currentPath)}`);
-      } else {
-        // Solo cargar datos si hay usuario autenticado
-        const savedAnalysis = localStorage.getItem('lastAnalysis');
-        if (savedAnalysis) {
-          const analysis = JSON.parse(savedAnalysis);
-          setDeudaActual(Number(analysis.deudaActual));
-          setPagoMinimo(Number(analysis.pagoMinimo));
-          setPagoMensual(Number(analysis.pagoMinimo));
-        }
-      }
-    });
-
-    return () => unsubscribe();
-  }, [router]);
+    const savedAnalysis = localStorage.getItem('lastAnalysis');
+    if (savedAnalysis) {
+      const analysis = JSON.parse(savedAnalysis);
+      setDeudaActual(Number(analysis.deudaActual));
+      setPagoMinimo(Number(analysis.pagoMinimo));
+      setPagoMensual(Number(analysis.pagoMinimo));
+    }
+  }, []);
 
   const calcularTiempoTotal = (deuda: number, pagoMensual: number, tasaMensual: number) => {
     let meses = 0;
